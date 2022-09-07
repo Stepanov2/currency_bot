@@ -20,8 +20,9 @@ CURRENCY_SYNONYMS={
     '£': 'GBP',
     '€': 'EUR',
     'евро': 'EUR',
-    'euro': 'EUR',
-    'evro': 'EUR'
+    'euro[\\w]*': 'EUR',
+    'evro': 'EUR',
+
 }
 
 

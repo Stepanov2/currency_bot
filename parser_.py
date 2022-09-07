@@ -24,6 +24,17 @@ def combinations(iterable) -> tuple:
     return
 
 
+def protect_from_value_errors(func):
+    def wrapper(*args):
+        try:
+            return func(*args)
+        except ValueError as e:
+            return f"Ощибочка вышла:\n{e}"
+        except OverflowError as e:
+            return f"Слищком многа:\n{e}"
+    return wrapper
+
+
 @dataclass(frozen=True, init=True)
 class ParserOperator:
     """Give a string to act as an operator, give list of strings to give operator some aliases."""
@@ -173,7 +184,8 @@ class ParserCase:
             raise TypeError("Must specify at least one operand either side of operator.")
 
         if quick_action:
-            self._action = quick_action
+            # self._action = quick_action
+            self._action = protect_from_value_errors(quick_action)
     @property
     def get_operator(self):
         return str(self._operator)
@@ -184,7 +196,8 @@ class ParserCase:
 
     def _action(self, *args) -> Union[str, None]:
         """When making a case, create a child of ParserCase and overload _action method with useful code.
-        This method is called with correct arguments in order specified when creating the instance."""
+        This method is called with correct arguments in order specified when creating the instance.
+        Or specify a lambda via quick_action argument of __init__"""
         # for arg in args:
         #     print(arg)
         return args
