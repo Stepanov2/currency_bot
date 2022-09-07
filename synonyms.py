@@ -1,23 +1,34 @@
-OPERAND_SYNONYMS={
-    'в': 'in'
+
+CURRENCY_SYNONYMS={
+    'доллар[\\w]*': 'USD',
+    'долар[\\w]*': 'USD',
+    'бакс[\\w]*': 'USD',
+    'бач[\\w]*': 'USD',
+    'dollar[\\w]*': 'USD',
+    'рубл[\\w]*': 'RUB',
+    'деревян[\\w]*': 'RUB',
+    'rouble[\\w]*': 'RUB',
+    'фунт[\\w]*': 'GBP',
+    'pound[\\w]*': 'GBP',
+    'йен[\\w]*': 'JPY',
+    'yen[\\w]*': 'JPY',
+    'юан[\\w]*': 'CNY',
+    'yan[\\w]*': 'CNY',
+    'frank': 'CHF',
+    'франк[\\w]*': 'CHF',
+    '\$': 'USD',
+    '£': 'GBP',
+    '€': 'EUR'
 }
 
-OPERATOR_SYNONYMS={
-    'доллар*': 'USD',
-    'долар*': 'USD',
-    'dollar*': 'USD',
-    'рубл*': 'USD',
-    'rouble*': 'USD',
-    'фунт*': ('GBP', 'lbs'),
-    'pound*': ('GBP', 'lbs'),
-    'йен*': 'USD',
-    'yen*': 'USD',
-    'юан*': 'USD',
-    'yan*': 'USD',
-    'евро': 'USD',
-    'euro*': 'USD',
-    'yen*': 'USD',
-    'yen*': 'USD',
-    'yen*': 'USD',
 
-}
+if __name__ == "__main__":
+    import re
+    while True:
+        what = input()
+        for synonym in CURRENCY_SYNONYMS.keys():
+            what = re.sub(synonym,
+                          CURRENCY_SYNONYMS[synonym],
+                          what,
+                          flags=re.IGNORECASE)
+        print(what)

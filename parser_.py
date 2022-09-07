@@ -41,18 +41,19 @@ class ParserOperator:
 
 
 class ParserOperand:
-    # operand_type: str = field(init=True)# 'dict', 'string' 'float' or 'int' string and int are not implemented.
-    # operand_checker: callable = field(init=True, default=None) # specify a function that checks data validity e.g. lambda x: x >= 0
-    # operand_list: dict = field(default_factory=dict)
 
-    def __init__(self, operand_type: str, operand_checker: Union[callable, None] = None, operand_list: Union[list, None] = None):
+    def __init__(self, operand_type: str,
+                 operand_checker: Union[callable, None] = None,
+                 operand_list: Union[list, None] = None,
+                 synonym_dict: Union[dict,None] = None):
         possible_operand_types = ('list', 'string', 'float', 'int')
         if operand_type not in possible_operand_types:
             raise ValueError("Incorrect operand type. Try 'list', 'string' 'float' or 'int'")
         if operand_type in ('string', 'int'):
             raise NotImplementedError('Maybe next time')
-        if operand_type == 'dict' and not isinstance(operand_list, dict):
-            raise ValueError('Must specify a dict of possible values, if operand_type == "dict"')
+        if operand_type == 'list' and not isinstance(operand_list, list):
+            raise ValueError('Must specify a list of possible values, if operand_type == "list"')
+
         if operand_type == 'float':
             self.check = self._check_float
             self._operand_type = 'float'
@@ -60,12 +61,20 @@ class ParserOperand:
             self.check = self._check_list
             self._operand_type = 'list'
         self._operand_type = operand_type
+
         if operand_checker is not None:
             self._operand_checker = operand_checker
         else:
             self._operand_checker = lambda x: True  # All hail Hindi Code!
+
         if operand_list is not None:
             self.operand_list = operand_list
+
+        if synonym_dict is not None:
+            self.synonym_dict = synonym_dict
+        else:
+            self.synonym_dict = None
+
 
     def __str__(self):
         return self.operand_type
@@ -108,18 +117,33 @@ class ParserOperand:
     def _check_list(self, what:str) -> Union[str, None]:
         """Returns str of operand in correct case if what can be interpreted as such, None otherwise"""
         what = what.strip()  # todo synonyms
+        if self.synonym_dict is not None:
+            for synonym in self.synonym_dict.keys():
+                what = re.sub(synonym,
+                              self.synonym_dict[synonym],
+                              what,
+                              flags=re.IGNORECASE)
         for each in self.operand_list:  # searching for what in list of possible values for this operand.
             if each.lower() == what.lower():
                 return each
         # If all of the above failed:
         return None
 
+
+genericFloatOperand = ParserOperand('float')
+genericFloatNotZeroOperand = ParserOperand('float', operand_checker=lambda x: x != 0)
+genericFloatPositiveOperand = ParserOperand('float', operand_checker=lambda x: x > 0)
+genericFloatNotNegativeOperand = ParserOperand('float', operand_checker=lambda x: x >= 0)
+
+
 class ParserOperation:
     def __init__(self):
         pass
 
+
 class ParserCase:
-    def __init__(self, *args:Union[ParserOperand, ParserOperator]):
+    def __init__(self, *args:Union[ParserOperand, ParserOperator],
+                 quick_action:Union[callable, None] = None):
         self._operator = None
         self.left_side_operands = []
         self.right_side_operands = []
@@ -148,6 +172,8 @@ class ParserCase:
         if not len(self.left_side_operands) or not len(self.right_side_operands):
             raise TypeError("Must specify at least one operand either side of operator.")
 
+        if quick_action:
+            self._action = quick_action
     @property
     def get_operator(self):
         return str(self._operator)
@@ -167,16 +193,20 @@ class ParserCase:
     def parse(self, inputstring: str) -> str:
         """Return reply, as specified by action, or raises ParsingFailure"""
         inputstring = inputstring.strip()
+        inputstring = inputstring.replace(self.get_operator, " " + self.get_operator + " ", 1)  # Meh!
+                                                                                        # Better approach needed
         inputwords = inputstring.split()
         for index, word in enumerate(inputwords):
             if self._operator.check(word):
                 break
         else:  #(nobreak)
-            raise ParsingFailure('No operand found in string')
+            raise ParsingFailure('No operator found in string')
         # print(self.left_side_operands[0].operand_type, self.left_side_operands[1].operand_type)
         # print(self.right_side_operands[0].operand_type)
         leftwords = inputwords[0:index]
         rightwords = inputwords[index+1:len(inputwords)]
+        if rightwords == [] or leftwords == []:
+            raise ParsingFailure("Not enough operands.")
 
         # ====== Checking left and right operands =======
         # ====== If either fails, check_operands will raise ParsingFailure
@@ -192,6 +222,8 @@ class ParserCase:
 
     def check_operands(self, words:list, operands:list) -> list :
         """Returns list of operands if all checks are valid"""
+        if len(operands) > len(words):
+            raise ParsingFailure('Not enough operands')
         if len(operands) == 1:
             result = operands[0].check(words[0])
             if result is None:
@@ -207,8 +239,24 @@ class ParserCase:
                 raise ParsingFailure('No valid operands')
             return [result1, result2]
 
+class Parser:
 
+    def __init__(self, *parsers: ParserCase):
+        self.parsers=[]
+        for parser in parsers:
+            self.parsers.append(parser)
 
+    @property
+    def parser_count(self):
+        return len(self.parsers)
+
+    def parse(self, string):
+        for parser in self.parsers:
+            try:
+                return parser.parse(string)
+            except ParsingFailure:
+                continue
+        return f"Can't parse '{string}'"
 
 
 
