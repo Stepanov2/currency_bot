@@ -106,8 +106,5 @@ class ParserCaseTest(unittest.TestCase):
             print(value)
 
 
-
-
-
 if __name__ == '__main__':
     unittest.main()
