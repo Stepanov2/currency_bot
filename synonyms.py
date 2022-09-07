@@ -18,7 +18,10 @@ CURRENCY_SYNONYMS={
     'франк[\\w]*': 'CHF',
     '\$': 'USD',
     '£': 'GBP',
-    '€': 'EUR'
+    '€': 'EUR',
+    'евро': 'EUR',
+    'euro': 'EUR',
+    'evro': 'EUR'
 }
 
 
