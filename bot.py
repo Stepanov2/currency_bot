@@ -219,6 +219,10 @@ if __name__ == "__main__":
     def praise_sticker(message: telebot.types.Message):
         bot.reply_to(message, 'Отличный стикер, Бро!')
 
-
-    # Activating bot
-    bot.polling(non_stop=True)
+    while True:
+        # Activating bot
+        try:  # hopefylly this will help with disconnects
+            bot.polling(non_stop=True)
+        except Exception:  # This is bad practice, but it's kinda hard to test what might be Raised here :-/
+            time.sleep(5)
+            continue
