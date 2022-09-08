@@ -50,7 +50,15 @@ class CurrencyConverter(ParserCase):
 
         # Try to contact the API_URL MAX_RETRIES times
         for tries in range(cls.MAX_RETRIES):
-            answer = requests.get(cls.API_URL, timeout=3)
+            print(f'Attempt #{tries+1} to reach API.')
+            try:  # didn't now this will raise an exception
+                answer = requests.get(cls.API_URL, timeout=3)
+            except requests.exceptions.ReadTimeout:
+                time.sleep(cls.TIMEOUT_BETWEEN_ATTEMPTS)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(cls.TIMEOUT_BETWEEN_ATTEMPTS)
+                continue
             if answer.status_code != 200:
                 time.sleep(cls.TIMEOUT_BETWEEN_ATTEMPTS)
             else:
@@ -59,6 +67,7 @@ class CurrencyConverter(ParserCase):
             if cls._rates_last_checked is not None:  # ...during runtime:
                 cls._rates_obsolete = True  # This will add a warning to answer
                 cls._rates_last_checked = time.time()  # this makes sure rates won't be updated again for some time
+                print('FYI, API is down.')
                 return
             else:  # ...during __init__. No point in going further then.
                 print('Was unable to get currency rates! What a shame!')
@@ -68,6 +77,7 @@ class CurrencyConverter(ParserCase):
         cls.rates = json.loads(answer.content)['rates']
         cls._rates_obsolete = False
         cls._rates_last_checked = time.time()
+        print("Sucsessfully fetched rates from API")
 
     @classmethod
     def return_list_of_currencies(cls):
@@ -84,7 +94,7 @@ class CurrencyConverter(ParserCase):
             except ReferenceError:
                 pass
             answer += '\n'
-            
+
         return answer
 
     def _action(self, value, orig_currency, target_currency):
