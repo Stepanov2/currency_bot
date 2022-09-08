@@ -176,6 +176,8 @@ class ParserCase:
     Quick action will be protected from errors via "protect_from_value_errors" decorator.
     To specify more complex behaviour create a child of this class and overload _action method.
     _action Must return a string!
+    You can use each Parser case as a standalone Parser (via parse "method"). Or feed multiple parser cases to
+    Parser class instance and check for all of them via Parser's parse "method".
     """
 
     def __init__(self, *args:Union[ParserOperand, ParserOperator],
@@ -230,7 +232,7 @@ class ParserCase:
         pass
 
     def parse(self, inputstring: str) -> str:
-        """Calls _action with correct operands in correct oreder if able to make sense of inputstring,
+        """Calls _action with correct operands in the correct order if able to make sense of inputstring,
         Raises ParsingFailure otherwise.
         """
 
@@ -248,34 +250,38 @@ class ParserCase:
         else:  #(nobreak)
             raise ParsingFailure('No operator found in string')
 
-        #splitting ...
+        # splitting inputwords into 2 sublists containig everything to the left of the operator
+        # and everything to the right of the operator
         leftwords = inputwords[0:index]
         rightwords = inputwords[index+1:len(inputwords)]
         if rightwords == [] or leftwords == []:
-            raise ParsingFailure("Not enough operands.")
+            raise ParsingFailure("Not enough operands.") # todo unary operators
 
         # ====== Checking left and right operands =======
         # ====== If either fails, check_operands will raise ParsingFailure
-
         result = self.check_operands(leftwords, self.left_side_operands)
         result.append(*self.check_operands(rightwords, self.right_side_operands))
 
         # === If parsing was successful - execute action
-
         return self._action(*result)
 
+    def check_operands(self, words: list, operands: list) -> list:  # todo will something break if @staticmethod ?
+        """Gets list of (1 or more) words and list of (1 or 2) operands.
+        If it is possible to combine words in such a way that all operand conditions are met, this returns
+        a list of valid values to be fed into _action.
+        Raises ParsingFailure otherwise.
+        """
 
-
-    def check_operands(self, words:list, operands:list) -> list :
-        """Returns list of operands if all checks are valid"""
         if len(operands) > len(words):
             raise ParsingFailure('Not enough operands')
-        if len(operands) == 1:
-            result = operands[0].check(words[0])
+
+        if len(operands) == 1:  # 1 operand
+            result = operands[0].check(words[0])  # todo should probably be ' '.join(words) instead
             if result is None:
                 raise ParsingFailure('No valid operands')
             else: return [result]
-        else:
+
+        else:  # 2 operands
             for possible_options in combinations(words):
                 result1 = operands[0].check(' '.join(possible_options[0]))
                 result2 = operands[1].check(' '.join(possible_options[1]))
@@ -285,8 +291,9 @@ class ParserCase:
                 raise ParsingFailure('No valid operands')
             return [result1, result2]
 
-class Parser:
 
+class Parser:
+    """Feed multiple ParserCase instances into this Class to be able to check each of them via parse method. """
     def __init__(self, *parsers: ParserCase):
         self.parsers=[]
         for parser in parsers:
@@ -297,6 +304,7 @@ class Parser:
         return len(self.parsers)
 
     def parse(self, string):
+        """Try every parser."""
         for parser in self.parsers:
             try:
                 return parser.parse(string)
@@ -305,12 +313,5 @@ class Parser:
         return f"Can't parse '{string}'"
 
 
-
-
-
 if __name__ == '__main__':
-
-
-
-    pass
-
+    print(__doc__)

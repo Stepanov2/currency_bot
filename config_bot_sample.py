@@ -1,7 +1,7 @@
 TOKEN = 'Paste your telegram bot token here!'
 # And rename this file to config_bot.py
 
-ISO 4217 ={
+ISO_4217 ={
     "AED" : "UAE Dirham",
     "AFN" : "Afghani",
     "ALL" : "Lek",
