@@ -61,6 +61,21 @@ class CurrencyConverter(ParserCase):
         cls._rates_obsolete = False
         cls._rates_last_checked = time.time()
 
+    @classmethod
+    def return_list_of_currencies(cls):
+        answer = ''
+        for currency_code in sorted(cls.rates.keys()):
+            answer += currency_code
+            try:
+                answer += f' ({ISO_4217[currency_code]})'
+            except KeyError:
+                pass
+            except ReferenceError:
+                pass
+            answer += '\n'
+        return answer
+
+
     def _action(self, value, orig_currency, target_currency):
 
         if time.time() - CurrencyConverter._rates_last_checked > CurrencyConverter.RATES_BECOME_OBSOLETE_AFTER:
@@ -81,92 +96,95 @@ class CurrencyConverter(ParserCase):
             string_to_return += '\n Please note that the rates are not up to date due to remote server problem.'
         return string_to_return
 
+if __name__ == "__main__":
 
-currencyConverterNormal = CurrencyConverter()
-currencyConverterReversed = CurrencyConverter(reverse=True)
+    # Initializing Currency conversion parser cases
+    currencyConverterNormal = CurrencyConverter()
+    currencyConverterReversed = CurrencyConverter(reverse=True)
 
+    # Making some operators for arithmetic operations
+    add_operator = ParserOperator('+')
+    substract_operator = ParserOperator('-')
+    multiply_operator = ParserOperator('*')
+    divide_operator = ParserOperator('/')
+    power_operator = ParserOperator('^', aliases=['**'])  # hello, python
+    sqrt_operator = ParserOperator('sqrt', aliases=['root'])  # hello, python
 
-# Generic arythmetic parsers
-add_operator = ParserOperator('+')
-substract_operator = ParserOperator('-')
-multiply_operator = ParserOperator('*')
-divide_operator = ParserOperator('/')
-power_operator = ParserOperator('^', aliases=['**'])  # hello, python
-sqrt_operator = ParserOperator('sqrt', aliases=['root'])  # hello, python
+    # And creating parser cases for said operations
+    generic_parsers=[]
+    generic_parsers.append(ParserCase(genericFloatOperand,  # addition
+                                      add_operator,
+                                      genericFloatOperand,
+                                      quick_action=lambda a, b: str(a+b)))
 
-generic_parsers=[]
-generic_parsers.append(ParserCase(genericFloatOperand,
-                                  add_operator,
-                                  genericFloatOperand,
-                                  quick_action=lambda a, b: str(a+b)))
-generic_parsers.append(ParserCase(genericFloatOperand,
-                                  substract_operator,
-                                  genericFloatOperand,
-                                  quick_action=lambda a, b: str(a-b)))
-generic_parsers.append(ParserCase(genericFloatOperand,
-                                  multiply_operator,
-                                  genericFloatOperand,
-                                  quick_action=lambda a, b: str(a*b)))
-generic_parsers.append(ParserCase(genericFloatOperand,
-                                  divide_operator,
-                                  genericFloatNotZeroOperand,
-                                  quick_action=lambda a, b: str(a/b)))
-generic_parsers.append(ParserCase(genericFloatPositiveOperand,
-                                  power_operator,
-                                  genericFloatOperand,
-                                  quick_action=lambda a, b: str(a**b)))
-# todo: single operand operators =)
-# generic_parsers.append(ParserCase(genericFloatNotNegativeOperand,
-#                                   sqrt_operator,
-#                                   genericFloatOperand,
-#                                   quick_action=lambda a, b: str(a+b)))
+    generic_parsers.append(ParserCase(genericFloatOperand,  # substraction
+                                      substract_operator,
+                                      genericFloatOperand,
+                                      quick_action=lambda a, b: str(a-b)))
 
+    generic_parsers.append(ParserCase(genericFloatOperand,  # multiplication
+                                      multiply_operator,
+                                      genericFloatOperand,
+                                      quick_action=lambda a, b: str(a*b)))
 
-telegramParser=Parser(currencyConverterNormal, currencyConverterReversed, *generic_parsers)
+    generic_parsers.append(ParserCase(genericFloatOperand,  # division
+                                      divide_operator,
+                                      genericFloatNotZeroOperand,
+                                      quick_action=lambda a, b: str(a/b)))
 
-# while True:
-#     input_ = input()
-#     if input_ == '': quit(0)
-#     print(telegramParser.parse(input_))
+    generic_parsers.append(ParserCase(genericFloatPositiveOperand,  # power
+                                      power_operator,
+                                      genericFloatOperand,
+                                      quick_action=lambda a, b: str(a**b)))
+
+    # todo: single operand operators =)
+    # generic_parsers.append(ParserCase(sqrt_operator,
+    #                                   genericFloatNotNegativeOperand,
+    #                                   quick_action=lambda a: str(a ** 0.5)))
 
 
+    # feeding all the parser cases created above into parser
+    telegramParser=Parser(currencyConverterNormal, currencyConverterReversed, *generic_parsers)
+
+   # initializing bot
+    bot = telebot.TeleBot(TOKEN)
+
+    # ========== bot.handlers ===============
+    @bot.message_handler(commands=['start', 'help'])
+    def say_hello(message: telebot.types.Message):
+        bot.reply_to(message, f'Привет, {message.from_user.full_name}!\n'
+                              f'Этот бот позволяет конвертировать курсы валют.\n'
+                              f'Например, введи "120 USD in GBP" или  "EUR 100 в CHF".\n'
+                              f'Писать большими буквами - не обязательно. "100 eur" - тоже работает.\n'
+                              f'Напиши /values, чтобы получить список всех доступных валют'
+                              f'Для популярных валют предусмотрены псевдонимы.\n'
+                              f'Например можно написать "1000 баксов в рублях".\n'
+                              f'Можно писать 100\'000 или 100 000, или 100,000.\n'
+                              f'Только не забывай про пробелы.\n'
+                              f'"100 USD in CHF" - работает. "100USD in CHF" - не работает.\n'
+                              f'Ещё можно пользоваться этим ботом как простым калькулятором.\n'
+                              f'Например, "150 * 20", "2 ^ 4".\n'
+                              f'Нет, много операций на строчку - нельзя.\n'
+                              f'Нет, "27 + 45 USD in EUR" - нельзя.\n'
+                              f'У автора погорел дедлайн и он не успел)\n'
+                              f'<3'
+                              f'P.S. Напиши /start или /help, чтобы вывести это сообщение ещё раз.}')
+
+    @bot.message_handler(commands=['values'])
+    def list_currencies(message: telebot.types.Message):
+        bot.reply_to(message, f'{CurrencyConverter.return_list_of_currencies()}')
 
 
-bot = telebot.TeleBot(TOKEN)
-
-
-@bot.message_handler(commands=['start', 'help'])
-def say_hello(message: telebot.types.Message):
-    bot.reply_to(message, f'Привет, {message.from_user.full_name}!\n'
-                          f'Этот бот позволяет конвертировать курсы валют.\n'
-                          f'Например, введи "120 USD in GBP" или  "EUR 100 в CHF".\n'
-                          f'Писать большими буквами - не обязательно. "100 eur" - тоже работает.\n'
-                          f'Для популярных валют предусмотрены псевдонимы.\n'
-                          f'Например можно написать "1000 баксов в рублях".\n'
-                          f'Можно писать 100\'000 или 100 000, или 100,000.\n'
-                          f'Только не забывай про пробелы.\n'
-                          f'"100 USD in CHF" - работает. "100USD in CHF" - не работает.\n'
-                          f'Ещё можно пользоваться этим ботом как простым калькулятором.\n'
-                          f'Например, "150 * 20", "2 ^ 4".\n'
-                          f'Нет, много операций на строчку - нельзя.\n'
-                          f'Нет, "27 + 45 USD in EUR" - нельзя.\n'
-                          f'У автора погорел дедлайн и он не успел)\n'
-                          f'<3')
-
-
-@bot.message_handler(content_types=['text'])
-def parse_command(message: telebot.types.Message):
-    bot.reply_to(message, telegramParser.parse(message.text))
-
-
-
-@bot.message_handler(content_types=['sticker'])
-def praise_sticker(message: telebot.types.Message):
-    bot.reply_to(message, 'Отличный стикер, Бро!')
-
-
-print('Bot is running!')
-bot.polling(non_stop=True)
+    @bot.message_handler(content_types=['text'])
+    def parse_command(message: telebot.types.Message):
+        bot.reply_to(message, telegramParser.parse(message.text))
 
 
 
+    @bot.message_handler(content_types=['sticker'])
+    def praise_sticker(message: telebot.types.Message):
+        bot.reply_to(message, 'Отличный стикер, Бро!')
+
+
+    # Activating bot
+    bot.polling(non_stop=True)
