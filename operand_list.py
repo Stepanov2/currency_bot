@@ -1,1 +1,0 @@
-OPERAND_LIST = ['in',]

@@ -1,5 +1,8 @@
+"""This file contains synonyms for currencies.
+Each dict key is a regex that will be replaced by corresponding value.
+"""
 
-CURRENCY_SYNONYMS={
+CURRENCY_SYNONYMS = {
     'доллар[\\w]*': 'USD',
     'долар[\\w]*': 'USD',
     'бакс[\\w]*': 'USD',
@@ -27,6 +30,7 @@ CURRENCY_SYNONYMS={
 
 
 if __name__ == "__main__":
+    """This lets you test your synonyms in console."""
     import re
     while True:
         what = input()

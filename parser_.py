@@ -1,13 +1,11 @@
-"""This contains input parser methods
-Input parser tries to search for "operator" literal and "operands" literals
-and returns function to call and parameters for said function.
+"""This file defines classes for parser operators, operands, cases and the parser itself.
+Import all of the above into your project to create your own parser.
 """
-import importlib #todo
-from operand_list import *
-from synonyms import *
+
 from dataclasses import dataclass, field
 import re
 from typing import Union
+
 
 class ParsingFailure(Exception):
     """Raised if unable to parse."""
@@ -18,7 +16,7 @@ def combinations(iterable) -> tuple:
     """This splits list into two in every possible way."""
     length = len(iterable)
     if length < 2:
-        raise ValueError("Can't split an iterable with lenght of 1")
+        raise ValueError("Can't split an iterable with length of 1")
     for i in range(1, length):
         yield iterable[0:i], iterable[i:length]
     return
@@ -46,7 +44,7 @@ class ParserOperator:
 
     def check(self, input:str) -> bool:
         """Checks if input string is an operator"""
-        if input.lower().strip() in self.aliases or input.lower().strip() == self.operator:
+        if input.lower().strip() == self.operator or input.lower().strip() in self.aliases:
             return True
         return False
 
@@ -56,7 +54,7 @@ class ParserOperator:
 
 class ParserOperand:
     """Specify limitations imposed on particular type of operand.
-    Operand type may be list string float or int.
+    Operand type may be list, string, float or int.
     Note: string and int are not implemented at the moment.
     For list, you must specify a list of compatible strings.
     You can optionally provide a dictionary of synonyms for list type operand.
@@ -67,7 +65,7 @@ class ParserOperand:
     def __init__(self, operand_type: str,
                  operand_checker: Union[callable, None] = None,
                  operand_list: Union[list, None] = None,
-                 synonym_dict: Union[dict,None] = None):
+                 synonym_dict: Union[dict, None] = None):
 
         possible_operand_types = ('list', 'string', 'float', 'int')
         if operand_type not in possible_operand_types:
@@ -98,7 +96,6 @@ class ParserOperand:
         else:
             self.synonym_dict = None
 
-
     def __str__(self):
         return self.operand_type
 
@@ -107,13 +104,14 @@ class ParserOperand:
         return self._operand_type
 
     def _check_float(self, what: str) -> Union[float, None]:
-        """Returns float if it is possible to interpret string as such, None otherwise"""
+        """Returns float if it is possible to interpret argument 'what' as such, None otherwise"""
 
         what = re.sub('[ ]', '', what)  # turns 250 000 into 250000
 
         try:  # to simply convert into float
             value = float(what)
-            if self._operand_checker(value): return value
+            if self._operand_checker(value):
+                return value
         except ValueError:
             pass
 
@@ -124,7 +122,8 @@ class ParserOperand:
             # todo it works great for currencies, but not for numbers in general
             if len(re.split('[,]', what)[-1]) > 2:
                 raise ValueError
-            if self._operand_checker(value): return value
+            if self._operand_checker(value):
+                return value
         except ValueError:
             pass
 
@@ -140,11 +139,11 @@ class ParserOperand:
         except ValueError:
             pass
 
-        # If all of the above failed:
+        # If all of the above failed, string can not be converted to float
         return None
 
     def _check_list(self, what: str) -> Union[str, None]:
-        """Returns str of operand in correct case if what can be interpreted as such, None otherwise"""
+        """Returns str of operand in correct case if argument 'what' can be interpreted as such, None otherwise"""
         what = what.strip()
 
         if self.synonym_dict is not None:  # substituting synonyms
@@ -170,18 +169,19 @@ genericFloatNotNegativeOperand = ParserOperand('float', operand_checker=lambda x
 
 
 class ParserCase:
-    """To create a parser case, feed it ParserOperands and ParserOperators in order in which they appear in expression
+    """To create a parser case, feed it ParserOperands and ParserOperators in order in which they appear in expression.
     Note:This currently doesn't support unary operators. Only binary ones with one or two operand either side of it.
-    To specify simple behaviour use optional quick_action variable.
+    To make ParserCase actually do something there are two options:
+    To specify simple behaviour use optional quick_action argument.
     Quick action will be protected from errors via "protect_from_value_errors" decorator.
     To specify more complex behaviour create a child of this class and overload _action method.
-    _action Must return a string!
-    You can use each Parser case as a standalone Parser (via parse "method"). Or feed multiple parser cases to
-    Parser class instance and check for all of them via Parser's parse "method".
+    _action must return something that has a __str__ method.
+    You can use each Parser case as a standalone Parser (via "parse" method). Or feed multiple parser cases to a
+    Parser class instance and check for all of them via Parser's "parse" method.
     """
 
-    def __init__(self, *args:Union[ParserOperand, ParserOperator],
-                 quick_action:Union[callable, None] = None):
+    def __init__(self, *args: Union[ParserOperand, ParserOperator],
+                 quick_action: Union[callable, None] = None):
 
         self._operator = None
         self.left_side_operands = []
@@ -202,7 +202,7 @@ class ParserCase:
                     else:
                         self.left_side_operands.append(arg)
 
-                else: # populating right side operators
+                else:  # populating right side operators
                     if len(self.right_side_operands) == 2:
                         raise TypeError("Can't have more than two operands either side of operator (for now)")
                     else:
@@ -211,7 +211,7 @@ class ParserCase:
         if not len(self.left_side_operands) or not len(self.right_side_operands):
             raise TypeError("Must specify at least one operand either side of operator.")  # todo unary operators
 
-        if quick_action: # overload _action with quick_action and protect it from errors
+        if quick_action:  # overload _action with quick_action and protect it from errors
             self._action = protect_from_value_errors(quick_action)
 
     @property
@@ -229,7 +229,6 @@ class ParserCase:
         """
 
         return str(args)
-        pass
 
     def parse(self, inputstring: str) -> str:
         """Calls _action with correct operands in the correct order if able to make sense of inputstring,
@@ -255,7 +254,7 @@ class ParserCase:
         leftwords = inputwords[0:index]
         rightwords = inputwords[index+1:len(inputwords)]
         if rightwords == [] or leftwords == []:
-            raise ParsingFailure("Not enough operands.") # todo unary operators
+            raise ParsingFailure("Not enough operands.")  # todo unary operators
 
         # ====== Checking left and right operands =======
         # ====== If either fails, check_operands will raise ParsingFailure
@@ -276,10 +275,11 @@ class ParserCase:
             raise ParsingFailure('Not enough operands')
 
         if len(operands) == 1:  # 1 operand
-            result = operands[0].check(words[0])  # todo should probably be ' '.join(words) instead
+            result = operands[0].check(' '.join(words))
             if result is None:
                 raise ParsingFailure('No valid operands')
-            else: return [result]
+            else:
+                return [result]
 
         else:  # 2 operands
             for possible_options in combinations(words):
