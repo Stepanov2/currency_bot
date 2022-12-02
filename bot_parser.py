@@ -193,7 +193,7 @@ generic_parsers.append(ParserCase(genericFloatPositiveOperand,  # power
 telegramParser = Parser(currencyConverterNormal, currencyConverterReversed, *generic_parsers)
 
 if __name__ == '__main__':
-    """This lets you test the parser in the console."""
+    """This lets you test telegramParser in the console if you so desire."""
 
     while True:
         what = input()

@@ -1,3 +1,7 @@
+"""Run this file to launch the bot!
+Make sure to paste your API key into config_bot_sample.py and to rename it to config_bot.py first!
+"""
+
 from config_bot import TOKEN
 import telebot
 from bot_parser import CurrencyConverter, telegramParser
@@ -45,7 +49,7 @@ if __name__ == "__main__":
 
     while True:
         # Activating bot
-        try:  # hopefylly this will help with disconnects
+        try:  # hopefully this will help with disconnects
             bot.polling(non_stop=True)
         except Exception:  # This is bad practice, but it's kinda hard to test what might be Raised here :-/
             time.sleep(5)
